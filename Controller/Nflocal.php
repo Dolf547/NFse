@@ -20,7 +20,7 @@ use Nfsews\Config;
 use Nfsews\Connection;
 use Nfsews\Certificate\Certificate;
 use Utils\System\Component\NF\NFe4;
-
+//txt
 //São Paulo
 use Nfsews\Providers\Prodam\V2\Request\PedidoEnvioRps;
 use Nfsews\Providers\Prodam\V2\Request\PedidoConsultaNfe;
