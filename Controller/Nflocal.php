@@ -1,0 +1,961 @@
+<?php
+
+include('adapted_vendor/nfse/src/Config.php');
+include('adapted_vendor/nfse/src/Connection.php');
+include('adapted_vendor/nfse/src/Certificate/Certificate.php');
+//adapted_vendor\nfse\src\Providers\Prodam\V2\Request
+//include('adapted_vendor/nfse/src/Providers/Prodam/V2/Request/PedidoEnvioRps.php');
+//C:\xampp\htdocs\yoursystem\adapted_vendor\nfse\src\Providers\Procempa\V3\Request
+include('adapted_vendor/nfse/src/Providers/Procempa/V3/Request/PedidoGerarNfse.php');
+include('adapted_vendor/nfse/src/Providers/Procempa/V3/Request/IRequest.php');
+include('adapted_vendor/nfse/src/Providers/Prodam/V2/Request/PedidoCancelamentoNfe.php');
+include('adapted_vendor/nfse/src/Providers/Prodam/V2/Request/CancelamentoNfeFragmento.php');
+
+include('adapted_vendor/nfse/src/Providers/Procempa/V3/Request/RpsFragmento.php');
+include('adapted_vendor/nfse/src/Providers/Procempa/V3/Request/PedidoConsultarNfseRps.php');
+include('adapted_vendor/nfse/src/Providers/Procempa/V3/Request/PedidoCancelarNfse.php');
+include(getCwd() . '/adapted_vendor/nfse/vendor/autoload.php');
+
+use Nfsews\Config;
+use Nfsews\Connection;
+use Nfsews\Certificate\Certificate;
+use Utils\System\Component\NF\NFe4;
+
+//São Paulo
+use Nfsews\Providers\Prodam\V2\Request\PedidoEnvioRps;
+use Nfsews\Providers\Prodam\V2\Request\PedidoConsultaNfe;
+use Nfsews\Providers\Prodam\V2\Request\PedidoConsultaCnpj;
+use Nfsews\Providers\Prodam\V2\Request\PedidoCancelamentoNfe;
+use Nfsews\Providers\Prodam\V2\Request\CancelamentoNfeFragmento;
+use Nfsews\Providers\Prodam\V2\Request\PedidoConsultaNfeRecebida;
+//Porto Alegre
+use Nfsews\Providers\Procempa\V3\Request\RpsFragmento;
+use Utils\System\Database\Enum\StatusNfAutorizadaEnum;
+use Utils\System\Database\Enum\StatusNfTransmitidaEnum;
+use Nfsews\Providers\Procempa\V3\Request\PedidoGerarNfse;
+use Nfsews\Providers\Procempa\V3\Request\PedidoConsultarNfseRps;
+use NFePHP\Common\Certificate as otherCertificate;
+use Nfsews\Providers\Procempa\V3\Request\PedidoCancelarNfse;
+use Utils\System\Component\NF\NFe4Danfe;
+
+ini_set("default_socket_timeout", 60);
+define('DS', DIRECTORY_SEPARATOR);
+
+class nflocal extends YS_Controller
+{
+	public function __construct()
+	{
+		parent::__construct();
+		$this->load->helper('number');
+		$this->company = $this->Empresas_model->getById($_SESSION['id_empresa']);
+		$this->caminhosXml = getCwd() . '/public/clientes/' . $_SESSION['id_empresa'] . '/nfe/';
+		$this->sefaz_ambiente = (isset($this->company->sefaz_ambiente) && $this->company->sefaz_ambiente == 1) ? 1 : 2;
+		$this->loadModel([
+			'Estados_model',
+			'NFSaida_model',
+			'Estados_model',
+			'Produtos_model',
+			'Clientes_model',
+			'Empresas_model',
+			'Recursos_model',
+			'Negociacao_model',
+			'Vendedores_model',
+			'NFSaidaItens_model',
+			'Numerosdeserie_model',
+			'Contasareceber_model',
+			'Ordensdeservico_model',
+			'CatalogosProdutos_model',
+			'Condicoesdepagamento_model',
+			'ListaServicos_model',
+			'Sistema_model',
+			'LogExclusao_model',
+			'MovimentoComissoes_model',
+			'Movimentosbancarios_model',
+			'Ordensdeservico_model'
+		]);
+	}
+	public function index($alert = '')
+	{
+		if (!empty($alert)) {
+			$this->session->keep_flashdata('alert');
+		}
+		$invoiceDate = null;
+		if (!empty($_POST['invoice_date'])) {
+			$invoiceDate = \DateTime::createFromFormat('d/m/Y', $_POST['invoice_date']);
+		}
+		$invoiceDateUntil = null;
+		if (!empty($_POST['invoice_date_until'])) {
+			$invoiceDateUntil = \DateTime::createFromFormat('d/m/Y', $_POST['invoice_date_until']);
+		}
+		$data_de_emi = !empty($this->input->post('data_de_emi')) ? dataBRparaUS($this->input->post('data_de_emi')) : date('Y-01-01');
+		$data_ate_emi = !empty($this->input->post('data_ate_emi')) ? dataBRparaUS($this->input->post('data_ate_emi')) : date('Y-m-d');
+		$nfs = $this->NFSaida_model->getNfse(
+			$this->input->post('document_number'),
+			$this->input->post('client_name'),
+			$invoiceDate,
+			$invoiceDateUntil,
+			$this->input->post('serial_number'),
+			$this->input->post('authorized_status'),
+			$this->input->post('transmitted_status'),
+			$this->input->post('type'),
+			null,
+			$data_de_emi,
+			$data_ate_emi,
+			$this->input->get('order')
+		);
+		$customSegments[1] = 'Monitor de NFSe';
+		$data['nfs'] = $nfs;
+		$data['customSegments'] = $customSegments;
+		$data['numserie'] = $this->Ordensdeservico_model->getNumSeries();
+		$this->view('nf_saida.monitor2_nfse', $data);
+	}
+
+	public function abrirResumoVenda()
+	{
+		$id_nf_saida = $_POST['id_nf_saida'];
+		$cabecalho = $this->NFSaida_model->getResumoVenda($id_nf_saida);
+
+		if ($cabecalho) {
+			$data['cabecalho'] = $cabecalho;
+		}
+		$itens = $this->NFSaida_model->getResumoVendaItens($id_nf_saida);
+		if ($itens) {
+			$data['itens'] = $itens;
+		}
+		$a = $this->Ordensdeservico_model->getById($cabecalho->id_negociacao);
+		$this->view('nf_saida/resumo_nf', $data);
+	}
+
+
+	public function verXML($id, $tipo)
+	{
+		$nf = $this->NFSaida_model->getByID($id);
+
+		if (empty($nf->xml_recebido)) {
+			exit('Problemas ao efetuar leitura do XML!');
+		}
+
+
+		$url = $nf->xml_recebido;
+		$arquivo = file_get_contents($url);
+		// var_dump($url);
+		$oXML = new SimpleXMLElement($arquivo);
+		header('Content-type: text/xml');
+		//echo $oXML->asXML();
+
+		exit;
+	}
+
+
+
+
+
+	public function transmitir($idNota)
+	{
+		$company = $this->company;
+		if ($company->municipio_empresa == "Porto Alegre") {
+			$this->envioRpsPOA($idNota);
+		} else {
+			$this->session->set_flashdata('alert', [
+				'warning',
+				'Múnicipio da sua empresa não disponível para envio da NFSE!'
+			]);
+			redirect('ordensdeservico');
+		}
+	}
+	public function consultar($idNota)
+	{
+		$company = $this->company;
+		if ($company->municipio_empresa == "Porto Alegre") {
+			$this->consultaRpsPOA($idNota);
+		} else {
+			$this->session->set_flashdata('alert', [
+				'warning',
+				'Múnicipio da sus empresa não disponível para envio da NFSE!'
+			]);
+			redirect('ordensdeservico');
+		}
+	}
+	public function cancelar($idNota)
+	{
+		$company = $this->company;
+		if ($company->municipio_empresa == "Porto Alegre") {
+			//	$this->cancelaRpsPOA($idNota);
+			$this->excluir($idNota);
+		} else {
+			$this->session->set_flashdata('alert', [
+				'warning',
+				'Múnicipio da sua empresa não disponível para envio da NFSE!'
+			]);
+			redirect('nflocal');
+		}
+	}
+	public function envioRpsSP($nota = null)
+	{
+		$company = $this->company;
+		$certificadoDigital = file_get_contents($this->caminhosXml . 'certificado.pfx');
+		$cnpj = str_replace(['.', '/', '-', ' '], '', $company->cnpj_empresa);
+		$senhaCertificado = $company->senhacertificadonfe;
+		$options = [
+			'soapOptions' => [
+				'ssl'   =>  [
+					'cafile'    =>  __dir__ . DS . 'ca_mozilla_2019.pem',
+				]
+			]
+		];
+		$config = new Config($options);
+		$config->setPfxCert($this->caminhosXml . 'certificado.pfx');
+		$config->setPasswordCert($senhaCertificado);
+		$config->setTmpDirectory(__dir__ . DS . 'tmp');
+		$config->setWsdl('https://nfe.prefeitura.sp.gov.br/ws/lotenfe.asmx?WSDL');
+		$certificate = new Certificate($config);
+		$rps = new PedidoEnvioRps();
+		$rps->setCpfCnpjRemetente($cnpj);
+		$rps->setCpfCnpjTomador('11.578.856/0001-58');
+		$rps->setDataEmissaoRps(date('Y-m-d'));
+		$rps->setInscricaoMunicipalPrestador('31000000');
+		$rps->setSerieRps('R1');
+		$rps->setNumeroRps('1');
+		$rps->setTipoRps('RPS-M');
+		$rps->setStatusRps('N');
+		$rps->setTributacaoRps('T');
+		$rps->setCodigoServico(2658);
+		$rps->setValorServicos(1400.50);
+		$rps->setValorDeducoes(50.01);
+		$rps->setValorCofins(0);
+		$rps->setValorPis(0);
+		$rps->setValorCsll(0);
+		$rps->setValorIr(0);
+		$rps->setValorInss(0);
+		$rps->setIssRetido(false);
+		$rps->setAliquotaServicos(0.05);
+		$rps->setDiscriminacao('adasdasdasdasdasd');
+		$rps->setIndicaTeste(true);
+		// Realizar a conexao
+		$connection = new Connection($config, $certificate);
+		// Enviar o RPS
+		$response = $connection->dispatch($rps);
+	}
+	public function cancelametoRps()
+	{
+		$company = $this->company;
+		$certificadoDigital = $this->caminhosXml . 'certificado.pfx';
+		$senhaCertificado = $company->senhacertificadonfe;
+		$cnpj = str_replace(['.', '/', '-', ' '], '', $company->cnpj_empresa);
+		$inscricao_mun = str_replace(['.', '/', '-', ' '], '', $company->inscricao_municipal);
+		$options = [
+			'soapOptions' => [
+				'ssl'   =>  [
+					'cafile'    =>  __dir__ . DS . 'ca_mozilla_2019.pem',
+				]
+			]
+		];
+		$config = new Config($options);
+		$config->setPfxCert($certificadoDigital);
+		$config->setPasswordCert($senhaCertificado);
+		$config->setTmpDirectory(__dir__ . DS . 'tmp');
+		$config->setWsdl('https://nfe.prefeitura.sp.gov.br/ws/lotenfe.asmx?WSDL');
+		$certificate = new Certificate($config);
+		$pedidoCancelamento = new PedidoCancelamentoNfe();
+		$pedidoCancelamento->setCpfCnpjRemetente($cnpj);
+		$pedidoCancelamento->setTransacao(false);
+		$nfe = new CancelamentoNfeFragmento();
+		$nfe->setInscricaoMunicipalPrestador($inscricao_mun);
+		$nfe->setNumeroNfe('1');
+		$pedidoCancelamento->addCancelamentoNfeFragmento($nfe);
+		// Realizar a conexao
+		$connection = new Connection($config, $certificate);
+		// Enviar o RPS
+		$response = $connection->dispatch($pedidoCancelamento);
+	}
+	public function envioRpsPOA($id)
+	{
+		$response = "";
+		$company = $this->company;
+		$certificadoDigital = $this->caminhosXml . 'certificado.pfx';
+		$senhaCertificado = $company->senhacertificadonfe;
+		$cnpj = str_replace(['.', '/', '-', ' '], '', $company->cnpj_empresa);
+		$im = str_replace(['.', '/', '-', ' '], '', $company->im_empresa);
+		$options = [
+			'soapOptions' => [
+				'ssl'   =>  [
+					'cafile'    =>  __dir__ . DS . 'ca_mozilla_2019.pem',
+				]
+			]
+		];
+		$config = new Config($options);
+		$config->setPfxCert($certificadoDigital);
+		$config->setPasswordCert($senhaCertificado);
+		$config->setTmpDirectory(__dir__ . DS . 'tmp');
+		if ($this->sefaz_ambiente == 1) {
+			$config->setWsdl('http://nfe.portoalegre.rs.gov.br/nfe-ws');
+		} else {
+			$config->setWsdl('https://nfse-hom.procempa.com.br/bhiss-ws/nfse?wsdl');
+		}
+		$certificate = new Certificate($config);
+		$dadosNF        = $this->NFSaida_model->getByID($id);
+		$dadosCliente   = $this->Clientes_model->getById($dadosNF->id_cliente);
+		$dadosItensNF   = $this->NFSaidaItens_model->getItemsByIdNegotiation($id);
+		$aEmpresa = $this->Sistema_model->getEmpresa();
+		$dadosUF        = $this->Estados_model->getStateById($dadosCliente->estado);
+		$pedido = new PedidoGerarNfse();
+		$pedido->setNumeroLote(1);
+		$pedido->setCpfCnpjPrestador($cnpj);
+		$pedido->setInscricaoMunicipalPrestador($im);
+		$rps = new RpsFragmento();
+		//dados do tomador
+		$rps->setStatus(1);
+		$rps->setTipoRps(1);
+		$rps->setUfTomador($dadosUF);
+		$rps->setCpfCnpjPrestador($cnpj);
+		$rps->setIncentivadorCultural(2);
+		$rps->setOptanteSimplesNacional($aEmpresa->simplesnacional_empresa);
+		$rps->setInscricaoMunicipalPrestador($im);
+		$rps->setDataEmissao(date('Y-m-d\TH:i:s'));
+		$rps->setSerieRps($dadosNF->serie_documento);
+		$rps->setEnderecoTomador($dadosCliente->rua);
+		$rps->setBairroTomador($dadosCliente->bairro);
+		$rps->setNumeroRps($dadosNF->numero_documento);
+		$vowels = array(".", "/", "-");
+		$tomadorcpf = str_replace($vowels, "", $dadosCliente->documento);
+		$rps->setCodigoMunicipioTomador($dadosCliente->ibge);
+		$rps->setNumeroEnderecoTomador($dadosCliente->numero);
+		$rps->setCodigoMunicipioPrestacao($dadosCliente->ibge);
+		$razao = preg_replace(array("/(á|à|ã|â|ä)/", "/(Á|À|Ã|Â|Ä)/", "/(é|è|ê|ë)/", "/(É|È|Ê|Ë)/", "/(í|ì|î|ï)/", "/(Í|Ì|Î|Ï)/", "/(ó|ò|õ|ô|ö)/", "/(Ó|Ò|Õ|Ô|Ö)/", "/(ú|ù|û|ü)/", "/(Ú|Ù|Û|Ü)/", "/(ñ)/", "/(Ñ)/", "/&/"), explode(" ", "a A e E i I o O u U n N"), $dadosCliente->razaosocial);
+		$rps->setRazaoSocialTomador($razao);
+		$rps->setCepTomador(str_replace(['.', '/', '-', ' '], '', $dadosCliente->cep));
+		$rps->setCpfCnpjTomador(str_replace(['.', '/', '-', ' '], '', $tomadorcpf));
+		$rps->setRegimeEspecialTributacao($aEmpresa->regimeespecial_empresa);
+		$certVal = $certValObj = null;
+		$cert = 'public/clientes/' . $this->Sistema_model->getEmpresa()->id_empresa . '/nfe/certificado.pfx';
+
+		if (file_exists($cert)) {
+			$certVal = true;
+			try {
+				$certO = otherCertificate::readPfx(file_get_contents($cert), $aEmpresa->senhacertificadonfe);
+				$certValObj = $certO->getValidTo();
+				$certVal = !empty($certValObj) ? $certValObj->format("U") : $certVal;
+			} catch (Exception $e) {
+				$certErr = $e->getMessage();
+			}
+		}
+
+		if (empty($certVal)) {
+			$a = "Você ainda não enviou seu certificado";
+			$arr = array(
+				'status_autorizada' => StatusNfAutorizadaEnum::NAO_AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::NAO_TRANSMITIDA,
+				//'chave_nfe' => $response->listaNfse[0]["numero"]->textContent,
+				//'numeroprefeitura' => $response->listaNfse[0]["numero"]->textContent,
+				//'protocolo' =>  $response->listaNfse[0]["codigoVerificacao"]->textContent,
+				'mensagem_nota' => $a,
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+			$this->session->set_flashdata('alert', 'danger', $a);
+			redirect('nflocal');
+		} else if (empty($certErr) && $certVal < time()) {
+			$a = "Seu certificado venceu em " . date("d/m/Y \à\s H:i:s", $certVal);
+			$arr = array(
+				'status_autorizada' => StatusNfAutorizadaEnum::NAO_AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::NAO_TRANSMITIDA,
+				//'chave_nfe' => $response->listaNfse[0]["numero"]->textContent,
+				//'numeroprefeitura' => $response->listaNfse[0]["numero"]->textContent,
+				//'protocolo' =>  $response->listaNfse[0]["codigoVerificacao"]->textContent,
+				'mensagem_nota' => $a,
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+
+			$this->session->set_flashdata('alert', 'danger', $a);
+
+			redirect('nflocal');
+		}
+
+
+
+
+		if ($dadosCliente->cidade != $company->municipio_empresa) {
+			$rps->setNaturezaOperacao(2);
+		} else {
+			$rps->setNaturezaOperacao(1);
+		}
+		$i = 1;
+		/* 	if(count($dadosItensNF) > 1){
+			$this->session->set_flashdata('alert', ['danger', 'Município não permite o envio de multiserviços']);
+			redirect('nflocal');
+		 } */
+
+		if ($dadosItensNF != null) {
+			foreach ($dadosItensNF as $product) {
+				if ($product->tipo != 'SE') {
+					$this->session->set_flashdata('alert', ['danger', 'O produto ' . $product->nome . ' não é um serviço!']);
+					redirect('nflocal');
+				}
+				$productDatabase  = $this->Produtos_model->getByIdFull($product->id_produto, 0);
+				$produtocodigo = $this->ListaServicos_model->getListaServicoByCodigo($productDatabase->codigo_issqn);
+
+				if (empty($productDatabase->codigo_issqn)) {
+					$this->session->set_flashdata('alert', ['danger', 'Serviço sem o código do ISS cadastrado. Entre no cadastro do produto informe o código e tente transmitir novamente!']);
+					redirect('nflocal');
+				}
+				/* 	$productListaServico = $this->Produtos_model->getListaServicoByCodigo($productDatabase->codigo_issqn);
+				if(empty($productListaServico)){
+					$this->session->set_flashdata('alert', ['danger', 'Código de ISSQN não encontrado na lista de serviços!']);
+					redirect('nflocal');
+				} */
+				//	$total = '';
+				$total .= "$product->nome; ";
+				//var_dump($rps->setDiscriminacao($total));
+
+				$liquido = $product->total - $dadosNF->desconto;
+				$rps->setValorServicos($dadosNF->valor_nota);
+				$rps->setdescontoIncondicionado($dadosNF->desconto);
+				$rps->setvalorLiquidoNfe($liquido);
+				$rps->setBaseCalculo($product->id_produto);
+				$rps->setAliquota($produtocodigo->aliquota);
+				$rps->setDiscriminacao($total);
+				$rps->setItemListaServico($produtocodigo->subitem_lista_servico);
+				//var_Dump($produtocodigo);
+				$rps->setValorIss($product->total * ($produtocodigo->aliquota / 100));
+				$rps->setCodigoTributacaoMunicipio(trim($productDatabase->codigo_issqn));
+
+				$i++;
+			}
+		}
+		//die;
+
+		//var_dump($product->id_produto); die;
+		// Os campos preenchidos acima são apenas os obrigatórios do ponto de vista estrutural do XML no entanto você deve
+		// continuar preenchendo até satisfazer todas as informações que a Prefeitura de Porto Alegre exige
+		$pedido->addFragmento($rps);
+		// Realizar a conexao
+		$connection = new Connection($config, $certificate);
+		// Enviar o RPS
+		$response = $connection->dispatch($pedido);
+
+		if ($response->listaNfse[0]["outrasInformacoes"]->textContent == null) {
+			$response->listaNfse[0]["outrasInformacoes"]->textContent = 'RPS Autorizada com sucesso';
+		}
+
+
+		$caminhosXml = getCwd() . '/public/clientes/' . $_SESSION['id_empresa'] . '/nfe/';
+
+		if (count($response->erros) > 0) {
+			$mensagem = "";
+			foreach ($response->erros as $_att) {
+				$mensagem .= $_att["codigo"] . ": " . $_att["mensagem"];
+			}
+
+			$arr = array(
+				'mensagem_nota' => $mensagem,
+				'xml_enviado' => $caminhosXml . $response->xmlEnvio,
+				'xml_recebido' => $caminhosXml . $response->xmlResposta,
+				'status_autorizada' => StatusNfAutorizadaEnum::NAO_AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::NAO_TRANSMITIDA,
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+			$this->session->set_flashdata('alert', ['danger', $mensagem]);
+			//echo $response->asXML();
+			//var_dump($response);
+			//	die;
+			redirect('nflocal');
+		} else {
+			//echo $response->asXML();
+			//var_dump($response);
+			$arr = array(
+				'xml_enviado' => $caminhosXml . $response->xmlEnvio,
+				'xml_recebido' => $caminhosXml . $response->xmlResposta,
+				'status_autorizada' => StatusNfAutorizadaEnum::AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::TRANSMITIDA,
+				'numeroprefeitura' => $response->listaNfse[0]["numero"]->textContent,
+				'chave_nfe' => $response->listaNfse[0]["numero"]->textContent,
+				'protocolo' => $response->listaNfse[0]["codigoVerificacao"]->textContent,
+				'mensagem_nota' => $response->listaNfse[0]["outrasInformacoes"]->textContent,
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+			
+			if ($company->nfseauto == 's') {
+				$this->imprimirRPS($id, 's');
+			}
+
+			$this->session->set_flashdata('alert', ['success', "NFSe transmitida com sucesso!"]);
+			redirect('nflocal');
+		}
+		redirect('nflocal');
+	}
+	public function consultaRpsPOA($id)
+	{
+
+
+
+
+
+
+
+
+		$company = $this->company;
+		$dadosNF = $this->NFSaida_model->getByID($id);
+		$certificadoDigital = $this->caminhosXml . 'certificado.pfx';
+		$senhaCertificado = $company->senhacertificadonfe;
+
+
+
+
+		$cnpj = str_replace(['.', '/', '-', ' '], '', $company->cnpj_empresa);
+		$im = str_replace(['.', '/', '-', ' '], '', $company->im_empresa);
+		$options = [
+			'soapOptions' => [
+				'ssl'   =>  [
+					'cafile'    =>  __dir__ . DS . 'ca_mozilla_2019.pem',
+				]
+			]
+		];
+		$numero_rps = str_pad($dadosNF->numero_documento, 11, '0', STR_PAD_LEFT);
+		$config = new Config($options);
+		$config->setPfxCert($certificadoDigital);
+		$config->setPasswordCert($senhaCertificado);
+		$config->setTmpDirectory(__dir__ . DS . 'tmp');
+		if ($this->sefaz_ambiente == 1) {
+			$config->setWsdl('http://nfe.portoalegre.rs.gov.br/nfe-ws');
+		} else {
+			$config->setWsdl('https://nfse-hom.procempa.com.br/bhiss-ws/nfse?wsdl');
+		}
+		$certificate = new Certificate($config);
+
+		$pedido = new PedidoConsultarNfseRps();
+		$pedido->setTipoRps(1);
+		$pedido->setNumeroRps($numero_rps);
+		$pedido->setCpfCnpjPrestador($cnpj);
+		$pedido->setInscricaoMunicipalPrestador($im);
+		$pedido->setSerieRps($dadosNF->serie_documento);
+		// Realizar a conexao
+		$connection = new Connection($config, $certificate);
+		// Enviar o RPS
+		$response = $connection->dispatch($pedido);
+
+		$aEmpresa = $this->Sistema_model->getEmpresa();
+		$certVal = $certValObj = null;
+		$cert = 'public/clientes/' . $this->Sistema_model->getEmpresa()->id_empresa . '/nfe/certificado.pfx';
+
+
+		if (file_exists($cert)) {
+			$certVal = true;
+			try {
+				$certO = otherCertificate::readPfx(file_get_contents($cert), $aEmpresa->senhacertificadonfe);
+				$certValObj = $certO->getValidTo();
+				$certVal = !empty($certValObj) ? $certValObj->format("U") : $certVal;
+			} catch (Exception $e) {
+				$certErr = $e->getMessage();
+			}
+		}
+
+		if (empty($certVal)) {
+			$a = "Você ainda não enviou seu certificado";
+			$arr = array(
+				'status_autorizada' => StatusNfAutorizadaEnum::NAO_AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::NAO_TRANSMITIDA,
+				//'chave_nfe' => $response->listaNfse[0]["numero"]->textContent,
+				//'numeroprefeitura' => $response->listaNfse[0]["numero"]->textContent,
+				//'protocolo' =>  $response->listaNfse[0]["codigoVerificacao"]->textContent,
+				'mensagem_nota' => $a,
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+
+			$this->session->set_flashdata('alert', ['danger', $a]);
+
+			redirect('nflocal');
+		} else if (empty($certErr) && $certVal < time()) {
+			$a = "Seu certificado venceu em " . date("d/m/Y \à\s H:i:s", $certVal);
+			$arr = array(
+				'status_autorizada' => StatusNfAutorizadaEnum::NAO_AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::NAO_TRANSMITIDA,
+				//'chave_nfe' => $response->listaNfse[0]["numero"]->textContent,
+				//'numeroprefeitura' => $response->listaNfse[0]["numero"]->textContent,
+				//'protocolo' =>  $response->listaNfse[0]["codigoVerificacao"]->textContent,
+				'mensagem_nota' => $a,
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+
+			$this->session->set_flashdata('alert', ['danger', $a]);
+
+			redirect('nflocal');
+		} else {
+			$a = "Certificado enviado, mas não foi possível ler a data de vencimento";
+			$arr = array(
+				'status_autorizada' => StatusNfAutorizadaEnum::NAO_AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::NAO_TRANSMITIDA,
+				//'chave_nfe' => $response->listaNfse[0]["numero"]->textContent,
+				//'numeroprefeitura' => $response->listaNfse[0]["numero"]->textContent,
+				//'protocolo' =>  $response->listaNfse[0]["codigoVerificacao"]->textContent,
+				'mensagem_nota' => $a,
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+
+			$this->session->set_flashdata('alert', ['danger', $a]);
+
+			redirect('nflocal');
+		};
+
+
+
+		if ($response->listaNfse[0]["outrasInformacoes"]->textContent == null) {
+			$response->listaNfse[0]["outrasInformacoes"]->textContent = 'RPS Autorizada com sucesso';
+		}
+
+
+		if (count($response->erros) > 0) {
+			$mensagem = "";
+			foreach ($response->erros as $_att) {
+				$mensagem .= $_att["codigo"] . ": " . $_att["mensagem"];
+			}
+			$this->session->set_flashdata('alert', ['danger', $mensagem]);
+			redirect('nflocal');
+		} else {
+			if ($dadosNF->cancelada == 'S') {
+				$this->session->set_flashdata('alert', ['success', 'Solicitação de cancelamento processada']);
+				$arr = array(
+					'mensagem_nota' => 'Solicitação de cancelamento processada',
+					'chave_nfe' => $response->listaNfse[0]["numero"]->textContent
+				);
+				$this->db->where('id', $id);
+				$this->db->update('nf_saida', $arr);
+				redirect('nflocal');
+			}
+
+			$arr = array(
+				'status_autorizada' => StatusNfAutorizadaEnum::AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::TRANSMITIDA,
+				'chave_nfe' => $response->listaNfse[0]["numero"]->textContent,
+				'numeroprefeitura' => $response->listaNfse[0]["numero"]->textContent,
+				'protocolo' =>  $response->listaNfse[0]["codigoVerificacao"]->textContent,
+				'mensagem_nota' => $response->listaNfse[0]["outrasInformacoes"]->textContent,
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+
+			$this->session->set_flashdata('alert', ['success', $response->listaNfse[0]["outrasInformacoes"]->textContent]);
+			redirect('nflocal');
+		}
+	}
+	function imprimirRPS($id = null, $enviaAuto = null)
+	{
+		$nf = $this->NFSaida_model->getByID($id);
+		$url = $nf->xml_recebido;
+		$arquivo = file_get_contents($url);
+		$oXML = new SimpleXMLElement($arquivo);
+		// header( 'Content-type: text/xml' );
+		/* 	header( 'Content-type: text/xml' );
+		echo $oXML->asXML(); */
+
+		$dadosOS        = $this->NFSaida_model->getByID($id);
+		$dadosItensOs   = $this->NFSaidaItens_model->getItemsByIdNegotiation($id);
+		$productDatabase  = $this->Produtos_model->getByIdFull($dadosItensOs[0]->id_produto, 0);
+		$produtocodigo = $this->ListaServicos_model->getListaServicoByCodigo($productDatabase->codigo_issqn);
+		$aEmpresa = $this->Sistema_model->getEmpresa();
+
+		if (isset($aEmpresa->regimeespecial_empresa)) {
+			if ($aEmpresa->regimeespecial_empresa == 10) {
+				$regime = 'Simples nacional com excesso do sublimite';
+			} elseif ($aEmpresa->regimeespecial_empresa == 9) {
+				$regime = 'Tributação Normal';
+			} elseif ($aEmpresa->regimeespecial_empresa == 8) {
+				$regime = 'Lucro Presumido';
+			} elseif ($aEmpresa->regimeespecial_empresa == 7) {
+				$regime = 'Lucro Real';
+			} elseif ($aEmpresa->regimeespecial_empresa == 6) {
+				$regime = 'Microempresário e Empresa de Pequeno Porte (ME EPP)';
+				$especial = 'Documento emitido por ME ou EPP optante pelo Simples Nacional. Não gera direito a credito fiscal de IPI.';
+			} elseif ($aEmpresa->regimeespecial_empresa == 5) {
+				$regime = 'Microempresário Individual (MEI)';
+			} elseif ($aEmpresa->regimeespecial_empresa == 4) {
+				$regime = 'Cooperativa';
+			} elseif ($aEmpresa->regimeespecial_empresa == 3) {
+				$regime = 'Sociedade de profissionais';
+			} elseif ($aEmpresa->regimeespecial_empresa == 2) {
+				$regime = 'Estimativa';
+			} elseif ($aEmpresa->regimeespecial_empresa == 1) {
+				$regime = 'Microempresa municipal';
+			}
+		}
+
+
+		//$negotiation = $this->Negociacao_model->getById($dadosOS->id_negociacao);
+
+		$curl = curl_init();
+		$ceptomador = $oXML->ListaNfse->CompNfse->Nfse->InfNfse->TomadorServico->Endereco->Cep;
+
+		curl_setopt_array($curl, array(
+			CURLOPT_URL => "https://viacep.com.br/ws/" . $ceptomador . "/json/unicode/",
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'GET',
+			CURLOPT_HTTPHEADER => array(
+				'Accept: text/xml',
+				'Content-Type: text/xml;charset=UTF-8'
+			),
+		));
+
+		$response = curl_exec($curl);
+		$b = json_decode($response);
+
+
+		$ordem = $this->Ordensdeservico_model->getById($dadosOS->id_negociacao);
+
+		if ($ordem->condicaopagamento != 0 && $ordem->condicaopagamento != '') {
+			$condpag = $this->Condicoesdepagamento_model->getValParcelas($ordem->condicaopagamento, $ordem->valorbruto, $ordem->vencimento);
+		} else {
+			$condpag = null;
+		}
+
+		$qtd = count($dadosItensOs);
+
+
+		$itenlist = $this->Ordensdeservico_model->getItens($dadosOS->id_negociacao);
+
+		$this->view('nf_saida.imprimirrps', [
+			'itenslist'		=> $itenlist,
+			'qtd'		   => $qtd,
+			'condpag'	   => $condpag,
+			'dadosOS'	   => $dadosOS,
+			'nf'           => $nf,
+			'compe'  	   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Competencia,
+			'DataEmissao'  => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->DataEmissao,
+			'dadosOS'      => $dadosOS,
+			'nome'  	   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->PrestadorServico->RazaoSocial,
+			'Cnpj'		   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->PrestadorServico->IdentificacaoPrestador->Cnpj,
+			'ie'		   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->PrestadorServico->IdentificacaoPrestador->InscricaoMunicipal,
+			'rua'		   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->PrestadorServico->Endereco->Endereco,
+			'num'		   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->PrestadorServico->Endereco->Numero,
+			'ap'		   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->PrestadorServico->Endereco->Complemento,
+			'bairro'	   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->PrestadorServico->Endereco->Bairro,
+			'cep'		   =>  $oXML->ListaNfse->CompNfse->Nfse->InfNfse->PrestadorServico->Endereco->Cep,
+			'nunfe'        => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Numero,
+			'cod'		   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->CodigoVerificacao,
+			'ietomador'	   =>  $oXML->ListaNfse->CompNfse->Nfse->InfNfse->TomadorServico->IdentificacaoTomador->InscricaoMunicipal,
+			'cpftomador'   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->TomadorServico->IdentificacaoTomador->CpfCnpj,
+			'RazaoSocialtomador' => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->TomadorServico->RazaoSocial,
+			'Enderecotomador'   =>  $oXML->ListaNfse->CompNfse->Nfse->InfNfse->TomadorServico->Endereco->Endereco,
+			'numetomador'	 => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->TomadorServico->Endereco->Numero,
+			'bairrotomaador'   => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->TomadorServico->Endereco->bairrotomaador,
+			'Ceptomador'	=> $oXML->ListaNfse->CompNfse->Nfse->InfNfse->TomadorServico->Endereco->Cep,
+			'discri'	 => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->Discriminacao,
+			'codigotomador' => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->CodigoMunicipio,
+			'CodigoTributacaoMunicipio' => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->CodigoTributacaoMunicipio,
+			'subitem'		=> $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->ItemListaServico,
+			'NaturezaOperacao' => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->NaturezaOperacao,
+			'valorprinc'  =>  $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->Valores->ValorServicos,
+			'IssRetido' => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->Valores->IssRetido,
+			'ValorIss' => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->Valores->ValorIss,
+			'BaseCalculo' => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->Valores->BaseCalculo,
+			'Aliquota' =>  $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->Valores->Aliquota,
+			'estadotomador' => $b->localidade,
+			'dadosItensOs' => $dadosItensOs,
+			'DescontoIncondicionado' => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->Valores->DescontoIncondicionado,
+			'valorliquido'	 => $oXML->ListaNfse->CompNfse->Nfse->InfNfse->Servico->Valores->ValorLiquidoNfse,
+			'tributacaotype' => $produtocodigo->descricao_servico,
+			'regime' => $regime,
+			'especial' => $especial,
+			'responsemsg' => $dadosOS->mensagem_nota,
+			'enviaAuto' => $enviaAuto,
+			'id' => $id
+		]);
+	}
+
+
+
+	public function excluir($idNota)
+	{
+		if (!$idNota) {
+			$this->session->set_flashdata('alert', [
+				'warning',
+				'Nota não encontrada'
+			]);
+			redirect('NFSe');
+		}
+		// busca nf
+		$nota = $this->NFSaida_model->getByID($idNota);
+		if (!$nota) {
+			$this->session->set_flashdata('alert', [
+				'warning',
+				'Nota não encontrada'
+			]);
+			redirect('NFSe');
+		}
+		$Itens = $this->NFSaidaItens_model->getItemsByIdNegotiation($idNota);
+		$jsonitens = array();
+		foreach ($Itens as $item) {
+			$dados = [
+				'nome' => $item->nome,
+				'valor' => $item->valor,
+				'total' => $item->total,
+				'codigo' => $item->codigo,
+				'desconto' => $item->desconto,
+				'quantidade' => $item->quantidade,
+			];
+			array_push($jsonitens, $dados);
+		}
+		$historico = [
+			'itens' => $jsonitens,
+			'cliente' => $nota->nomecliente,
+		];
+		$data = [
+			'numero_documento' => $nota->numero_documento,
+			'usercri' => $this->session->userdata('nome'),
+			'serie_documento' => $nota->serie_documento,
+			'tabela' => $this->NFSaida_model->table,
+			'historico' => json_encode($historico),
+			'descricao' => 'Nota Fiscal de Saída',
+			'data_exclusao' => date('Y-m-d'),
+			'hora_exclusao' => date('H:i'),
+			'motivo' => $motivo,
+		];
+		$this->LogExclusao_model->add($data);
+		$titulos = $this->Contasareceber_model->getTitulosByIdNotaSaida($nota->id);
+
+		// valida se teve baixa total ou parcial
+		if ($titulos) {
+			foreach ($titulos as $tit) {
+				if ($tit->valorpago_cr > 0) {
+					$this->session->set_flashdata('alert', [
+						'error',
+						"O título à receber de número {$tit->numero_cr}, vinculado a essa nota, teve algum valor pago",
+						'Nota não pode ser excluída'
+					]);
+					redirect('NFSe');
+				}
+			}
+		}
+		// busca comissões
+		$comissoes = $this->MovimentoComissoes_model->getByNota($nota->serie_documento, $nota->numero_documento);
+		foreach ($comissoes as $comissao) {
+			if ($comissao->saldo_comissao == 0) {
+				$data = [
+					'tipo' => 'S',
+					'data_pagamento' => null,
+					'datamod' => date('Y-m-d'),
+					'datacri' => date('Y-m-d'),
+					'data_movimento' => date('Y-m-d'),
+					'vendedor' => $comissao->vendedor,
+					'nf_origem' => $comissao->nf_origem,
+					'valor_base' => $comissao->valor_base,
+					'percentual' => $comissao->percentual,
+					'usercri' => $this->session->userdata('nome'),
+					'usermod' => $this->session->userdata('nome'),
+					'valor_comissao' => $comissao->valor_comissao,
+					'saldo_comissao' => $comissao->valor_comissao,
+					'nf_origem_serie' => $comissao->nf_origem_serie,
+				];
+				$this->MovimentoComissoes_model->save($data);
+			} else {
+				$this->MovimentoComissoes_model->delete($comissao->id);
+			}
+		}
+		$this->Negociacao_model->edit($nota->id_negociacao, ['numero_documento' => null, 'serie_documento' => null]);
+
+		// exclui titulos
+		$this->Contasareceber_model->excluiTitulosDaNota($idNota);
+		// exclui movimentos bancários
+		$this->Movimentosbancarios_model->excluiMovimentosDaNota($idNota);
+		//retorna a ordem servico;
+		$this->Ordensdeservico_model->getMod($nota->numero_documento);
+		$this->cancelaRpsPOA($idNota);
+
+		// exclui nf_saida_itens
+		redirect('Nflocal');
+	}
+
+
+
+	public function cancelaRpsPOA($id)
+	{
+		$dadosNF = $this->NFSaida_model->getByID($id);
+		$company = $this->company;
+		$certificadoDigital = $this->caminhosXml . 'certificado.pfx';
+		$senhaCertificado = $company->senhacertificadonfe;
+		$cnpj = str_replace(['.', '/', '-', ' '], '', $company->cnpj_empresa);
+		$im = str_replace(['.', '/', '-', ' '], '', $company->im_empresa);
+		$options = [
+			'soapOptions' => [
+
+				'ssl'   =>  [
+					'cafile'    =>  __dir__ . DS . 'ca_mozilla_2019.pem',
+				]
+			]
+		];
+		$numero_rps = date('Y') . str_pad($dadosNF->numero_documento, 11, '0', STR_PAD_LEFT);
+		$config = new Config($options);
+		$config->setPfxCert($certificadoDigital);
+		$config->setPasswordCert($senhaCertificado);
+		$config->setTmpDirectory(__dir__ . DS . 'tmp');
+		if ($this->sefaz_ambiente == 1) {
+			$config->setWsdl('http://nfe.portoalegre.rs.gov.br/nfe-ws');
+		} else {
+			$config->setWsdl('https://nfse-hom.procempa.com.br/bhiss-ws/nfse?wsdl');
+		}
+		$certificate = new Certificate($config);
+		$certificate = new Certificate($config);
+
+		$pedidoCancelamento = new PedidoCancelarNfse();
+		$pedidoCancelamento->cpfCnpjPrestador($cnpj);
+		$pedidoCancelamento->setNumeroNfse($dadosNF->chave_nfe);
+
+		$pedidoCancelamento->setCodigoMunicipio('4314902');
+		$pedidoCancelamento->setCodigoCancelamento('2');
+		$pedidoCancelamento->setIdPedidoCancelamento($dadosNF->chave_nfe);
+		$pedidoCancelamento->setInscricaoMunicipalPrestador($im);
+		$nfe = new CancelamentoNfeFragmento();
+		$nfe->setInscricaoMunicipalPrestador($im);
+		$nfe->setNumeroNfe($dadosNF->chave_nfe);
+
+		$connection = new Connection($config, $certificate);
+
+		// Enviar o RPS
+		$response = $connection->dispatch($pedidoCancelamento);
+
+		/* 	var_dump($response);
+		die; */
+
+
+
+		if ($dadosNF->cancelada == 'S') {
+			$this->session->set_flashdata('alert', ['success', 'Solicitação de cancelamento processada']);
+			redirect('nflocal');
+		} else {
+			$arr = array(
+				'status_autorizada' => StatusNfAutorizadaEnum::AUTORIZADA,
+				'status_transmitida' => StatusNfTransmitidaEnum::TRANSMITIDA,
+				'mensagem_nota' => 'Solicitação de cancelamento processada',
+				'cancelada' => 'S'
+			);
+			$this->db->where('id', $id);
+			$this->db->update('nf_saida', $arr);
+			$this->session->set_flashdata('alert', ['success', 'NFSE cancelada com sucesso']);
+			redirect('nflocal');
+		}
+	}
+
+	public function save_pdf_nfse($id, $docnumber)
+	{
+		$nfse = $this->NFSaida_model->getById($id);
+		$fileName = $nfse->numero_documento ? 'NFSE' . $nfse->numero_documento . '.pdf' : 'NFSE' . strval(rand(1000,9999)) . '.pdf';
+		
+		$path = FCPATH . 'public\clientes\\' . $_SESSION['id'] . '\danfes\\';
+		$file = $path . $fileName;
+
+		// $this->BoletoConfigs_model->editBoletoConfig($id, ['pdf_boleto' => $file]);
+		move_uploaded_file($_FILES['pdf']['tmp_name'], $file);
+		
+		$nf = new NFe4Danfe();
+		$nf->send_mail_nfse($id, $file, $docnumber);		
+	}
+}
