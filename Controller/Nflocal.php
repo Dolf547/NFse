@@ -20,7 +20,7 @@ use Nfsews\Config;
 use Nfsews\Connection;
 use Nfsews\Certificate\Certificate;
 use Utils\System\Component\NF\NFe4;
-//txt
+
 //São Paulo
 use Nfsews\Providers\Prodam\V2\Request\PedidoEnvioRps;
 use Nfsews\Providers\Prodam\V2\Request\PedidoConsultaNfe;
@@ -268,6 +268,110 @@ class nflocal extends YS_Controller
 		// Enviar o RPS
 		$response = $connection->dispatch($pedidoCancelamento);
 	}
+
+
+	public function envioRpsBomprincipio($id)
+	{
+
+		$response = "";
+		$company = $this->company;
+		$certificadoDigital = $this->caminhosXml . 'certificado.pfx';
+		$senhaCertificado = $company->senhacertificadonfe;
+		$cnpj = str_replace(['.', '/', '-', ' '], '', $company->cnpj_empresa);
+		$im = str_replace(['.', '/', '-', ' '], '', $company->im_empresa);
+		$options = [
+			'soapOptions' => [
+				'ssl'   =>  [
+					'cafile'    =>  __dir__ . DS . 'ca_mozilla_2019.pem',
+				]
+			]
+		];
+	
+		$config = new Config($options);
+		$config->setPfxCert($certificadoDigital);
+		$config->setPasswordCert($senhaCertificado);
+		$config->setTmpDirectory(__dir__ . DS . 'tmp');
+		if ($this->sefaz_ambiente == 1) {
+			$config->setWsdl('http://bomprincipio.nfse-tecnos.com.br:9091');
+		} else {
+			$config->setWsdl('http://homologabomprincipio.nfse-tecnos.com.br:9091/EnvioLoteRPSSincrono.asmx?WSDL');
+			//$config->setWsdl('https://nfse-hom.procempa.com.br/bhiss-ws/nfse?wsdl');
+
+		}
+
+		$certificate = new Certificate($config);
+		$dadosNF        = $this->NFSaida_model->getByID($id);
+		$dadosCliente   = $this->Clientes_model->getById($dadosNF->id_cliente);
+		$dadosItensNF   = $this->NFSaidaItens_model->getItemsByIdNegotiation($id);
+		$aEmpresa = $this->Sistema_model->getEmpresa();
+		$dadosUF        = $this->Estados_model->getStateById($dadosCliente->estado);
+		$pedido = new PedidoGerarNfse();
+		$pedido->setNumeroLote(1);
+		$pedido->setCpfCnpjPrestador($cnpj);
+		$pedido->setInscricaoMunicipalPrestador($im);
+		$rps = new RpsFragmento();
+	
+		//dados do tomador
+		$rps->setStatus(1);
+		$rps->setTipoRps(1);
+		$rps->setUfTomador($dadosUF);
+		$rps->setCpfCnpjPrestador($cnpj);
+		$rps->setIncentivadorCultural(2);
+		$rps->setOptanteSimplesNacional($aEmpresa->simplesnacional_empresa);
+		$rps->setInscricaoMunicipalPrestador($im);
+		$rps->setDataEmissao(date('Y-m-d\TH:i:s'));
+		$rps->setSerieRps($dadosNF->serie_documento);
+		$rps->setEnderecoTomador($dadosCliente->rua);
+		$rps->setBairroTomador($dadosCliente->bairro);
+		$rps->setNumeroRps($dadosNF->numero_documento);
+		$vowels = array(".", "/", "-");
+		$tomadorcpf = str_replace($vowels, "", $dadosCliente->documento);
+		$rps->setCodigoMunicipioTomador($dadosCliente->ibge);
+		$rps->setNumeroEnderecoTomador($dadosCliente->numero);
+		$rps->setCodigoMunicipioPrestacao($dadosCliente->ibge);
+		$razao = preg_replace(array("/(á|à|ã|â|ä)/", "/(Á|À|Ã|Â|Ä)/", "/(é|è|ê|ë)/", "/(É|È|Ê|Ë)/", "/(í|ì|î|ï)/", "/(Í|Ì|Î|Ï)/", "/(ó|ò|õ|ô|ö)/", "/(Ó|Ò|Õ|Ô|Ö)/", "/(ú|ù|û|ü)/", "/(Ú|Ù|Û|Ü)/", "/(ñ)/", "/(Ñ)/", "/&/"), explode(" ", "a A e E i I o O u U n N"), $dadosCliente->razaosocial);
+		$rps->setRazaoSocialTomador($razao);
+		$rps->setCepTomador(str_replace(['.', '/', '-', ' '], '', $dadosCliente->cep));
+		$rps->setCpfCnpjTomador(str_replace(['.', '/', '-', ' '], '', $tomadorcpf));
+		$rps->setRegimeEspecialTributacao($aEmpresa->regimeespecial_empresa);
+		$certVal = $certValObj = null;
+		$cert = 'public/clientes/' . $this->Sistema_model->getEmpresa()->id_empresa . '/nfe/certificado.pfx';
+		$rps->setValorServicos($dadosNF->valor_nota);
+		$rps->setdescontoIncondicionado($dadosNF->desconto);
+		$rps->setvalorLiquidoNfe($liquido);
+		$rps->setBaseCalculo($product->id_produto);
+		$rps->setAliquota($produtocodigo->aliquota);
+		$rps->setDiscriminacao($total);
+		$rps->setItemListaServico($produtocodigo->subitem_lista_servico);
+		//var_Dump($produtocodigo);
+		$rps->setValorIss($product->total * ($produtocodigo->aliquota / 100));
+		$rps->setCodigoTributacaoMunicipio(trim($productDatabase->codigo_issqn));
+
+		
+		$pedido->addFragmento($rps);
+
+	
+		// Realizar a conexao
+		$connection = new Connection($config, $certificate);
+		/* echo '<pre>' , var_dump($connection) , '</pre>';
+		die; */
+		
+		// Enviar o RPS
+		$response = $connection->dispatch($pedido);
+		//phpinfo();
+	var_dump($response);
+		die;
+
+	//	redirect('nflocal');
+	
+
+}
+
+
+
+
+
+
 	public function envioRpsPOA($id)
 	{
 		$response = "";
