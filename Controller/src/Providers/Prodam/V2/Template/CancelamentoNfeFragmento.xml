@@ -1,0 +1,7 @@
+<Detalhe xmlns="">
+    <ChaveNFe>
+        <InscricaoPrestador>{inscricaoMunicipalPrestador}</InscricaoPrestador>
+        <NumeroNFe>{numeroNfe}</NumeroNFe>
+    </ChaveNFe>
+    <AssinaturaCancelamento>{assinaturaCancelamento}</AssinaturaCancelamento>
+</Detalhe>

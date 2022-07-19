@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<n1:PedidoConsultaNFePeriodo xmlns:n1="http://www.prefeitura.sp.gov.br/nfe" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Cabecalho Versao="1">
+        <CPFCNPJRemetente>
+            {CpxCpfCnpjRemetente}
+        </CPFCNPJRemetente>
+        <CPFCNPJ>
+            {CpxCpfCnpjConsulta}
+        </CPFCNPJ>
+        <Inscricao>{inscricaoMunicipalConsulta}</Inscricao>
+        <dtInicio>{dataInicio}</dtInicio>
+        <dtFim>{dataFim}</dtFim>
+        <NumeroPagina>{numeroPagina}</NumeroPagina>
+    </Cabecalho>
+</n1:PedidoConsultaNFePeriodo>

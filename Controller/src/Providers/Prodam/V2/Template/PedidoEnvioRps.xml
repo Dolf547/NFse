@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<n1:PedidoEnvioRPS xmlns:n1="http://www.prefeitura.sp.gov.br/nfe"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Cabecalho Versao="1" xmlns="">
+        <CPFCNPJRemetente>
+           {CpxCpfCnpjRemetente}
+        </CPFCNPJRemetente>
+    </Cabecalho>
+    <RPS xmlns="">
+        <Assinatura>{assinatura}</Assinatura>
+        <ChaveRPS>
+            <InscricaoPrestador>{inscricaoMunicipalPrestador}</InscricaoPrestador>
+            <SerieRPS>{serieRps}</SerieRPS>
+            <NumeroRPS>{numeroRps}</NumeroRPS>
+        </ChaveRPS>
+        <TipoRPS>{tipoRps}</TipoRPS>
+        <DataEmissao>{dataEmissaoRps}</DataEmissao>
+        <StatusRPS>{statusRps}</StatusRPS>
+        <TributacaoRPS>{tributacaoRps}</TributacaoRPS>
+        <ValorServicos>{valorServicos}</ValorServicos>
+        <ValorDeducoes>{valorDeducoes}</ValorDeducoes>
+        <ValorPIS>{valorPis}</ValorPIS>
+        <ValorCOFINS>{valorCofins}</ValorCOFINS>
+        <ValorINSS>{valorInss}</ValorINSS>
+        <ValorIR>{valorIr}</ValorIR>
+        <ValorCSLL>{valorCsll}</ValorCSLL>
+        <CodigoServico>{codigoServico}</CodigoServico>
+        <AliquotaServicos>{aliquotaServicos}</AliquotaServicos>
+        <ISSRetido>{issRetido}</ISSRetido>
+        <CPFCNPJTomador>
+            {CpxCpfCnpjTomador}
+        </CPFCNPJTomador>
+        <InscricaoMunicipalTomador>{inscricaoMunicipalTomador}</InscricaoMunicipalTomador>
+        <RazaoSocialTomador>{razaoSocialTomador}</RazaoSocialTomador>
+        <EnderecoTomador>
+            <TipoLogradouro>{tipoEnderecoTomador}</TipoLogradouro>
+            <Logradouro>{enderecoTomador}</Logradouro>
+            <NumeroEndereco>{numeroEnderecoTomador}</NumeroEndereco>
+            <ComplementoEndereco>{complementoEnderecoTomador}</ComplementoEndereco>
+            <Bairro>{bairroEnderecoTomador}</Bairro>
+            <Cidade>{ibgeCidadeTomador}</Cidade>
+            <UF>{ufTomador}</UF>
+            <CEP>{cepTomador}</CEP>
+        </EnderecoTomador>
+        <EmailTomador>{emailTomador}</EmailTomador>
+        <CPFCNPJIntermediario>
+            {CpxCpfCnpjIntermediario}
+        </CPFCNPJIntermediario>
+        <InscricaoMunicipalIntermediario>{inscricaoMunicipalIntemediario}</InscricaoMunicipalIntermediario>
+        <ISSRetidoIntermediario>{issRetidoIntermediario}</ISSRetidoIntermediario>
+        <EmailIntermediario>{emailIntermediario}</EmailIntermediario>
+        <Discriminacao>{discriminacao}</Discriminacao>
+        <ValorCargaTributaria>{valorCargaTributaria}</ValorCargaTributaria>
+        <PercentualCargaTributaria>{percentualCargaTributaria}</PercentualCargaTributaria>
+        <CodigoCEI>{codigoCei}</CodigoCEI>
+        <MatriculaObra>{matriculaObra}</MatriculaObra>
+        <MunicipioPrestacao>{municipioPrestacao}</MunicipioPrestacao>
+        <NumeroEncapsulamento>{numeroEncapsulamento}</NumeroEncapsulamento>
+        <ValorTotalRecebido>{valorTotalRecebido}</ValorTotalRecebido>
+        <FonteCargaTributaria>{fonteCargaTributaria}</FonteCargaTributaria>
+    </RPS>
+</n1:PedidoEnvioRPS>

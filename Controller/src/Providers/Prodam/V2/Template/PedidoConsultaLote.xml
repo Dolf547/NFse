@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PedidoConsultaLote xmlns="http://www.prefeitura.sp.gov.br/nfe" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Cabecalho xmlns="" Versao="1">
+        <CPFCNPJRemetente>
+            {CpxCpfCnpjRemetente}
+        </CPFCNPJRemetente>
+        <NumeroLote>{numeroLote}</NumeroLote>
+    </Cabecalho>
+</PedidoConsultaLote>

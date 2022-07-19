@@ -1,0 +1,12 @@
+<Detalhe>
+    <ChaveRPS>
+        <InscricaoPrestador>{rpsInscricaoMunicipalPrestador}</InscricaoPrestador>
+        <SerieRPS>{serieRps}</SerieRPS>
+        <NumeroRPS>{numeroRps}</NumeroRPS>
+    </ChaveRPS>
+    <ChaveNFe>
+        <InscricaoPrestador>{nfeInscricaoMunicipalPrestador}</InscricaoPrestador>
+        <NumeroNFe>{numeroNfe}</NumeroNFe>
+        <CodigoVerificacao>{codigoVerificacao}</CodigoVerificacao>
+    </ChaveNFe>
+</Detalhe>

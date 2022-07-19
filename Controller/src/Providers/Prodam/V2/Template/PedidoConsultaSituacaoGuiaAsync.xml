@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<n1:PedidoConsultaSituacaoGuia xmlns:n1="http://www.prefeitura.sp.gov.br/nfe" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <CPFCNPJRemetente>
+        {CpxCpfCnpjRemetente}
+    </CPFCNPJRemetente>
+    <NumeroProtocolo>{numeroProtocolo}</NumeroProtocolo>
+</n1:PedidoConsultaSituacaoGuia>

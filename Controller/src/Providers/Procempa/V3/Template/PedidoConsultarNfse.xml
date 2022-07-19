@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ConsultarNfseEnvio xmlns="http://www.abrasf.org.br/nfse.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.abrasf.org.br/nfse.xsd">
+    <Prestador>
+        {cpxCpfCnpjPrestador}
+        <InscricaoMunicipal>{inscricaoMunicipalPrestador}</InscricaoMunicipal>
+    </Prestador>
+    <NumeroNfse>{numeroNfse}</NumeroNfse>
+    <PeriodoEmissao>
+        <DataInicial>{dataInicialNfse}</DataInicial>
+        <DataFinal>{dataFinalNfse}</DataFinal>
+    </PeriodoEmissao>
+    <Tomador>
+        <CpfCnpj>
+            {cpxCpfCnpjTomador}
+        </CpfCnpj>
+        <InscricaoMunicipal>{inscricaoMunicipalTomador}</InscricaoMunicipal>
+    </Tomador>
+    <IntermediarioServico>
+        <CpfCnpj>
+            {cpxCpfCnpjIntermediario}
+        </CpfCnpj>
+        <InscricaoMunicipal>{inscricaoMunicipalIntermediario}</InscricaoMunicipal>
+    </IntermediarioServico>
+</ConsultarNfseEnvio>

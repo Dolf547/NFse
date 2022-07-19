@@ -1,0 +1,19 @@
+{
+    "name": "moisesf10/idz-nfse-ws",
+    "description": "Classe para emitir Nota Fiscal NFS-e via webservice",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Moisés Ferreira",
+            "email": "moises@webiss.com.br"
+        }
+    ],
+    "minimum-stability": "beta",
+    "require": {
+        "nfephp-org/sped-common": "^5.0",
+        "katzgrau/klogger": "^1.2"
+    },
+    "autoload": {
+        "psr-4": {"Nfsews\\": "src/"}
+    }
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tns:PedidoConsultaGuia xmlns:tns="http://www.prefeitura.sp.gov.br/nfe" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <CPFCNPJRemetente>
+        {CpxCpfCnpjRemetente}
+    </CPFCNPJRemetente>
+    <InscricaoPrestador>{inscricaoMunicipalPrestador}</InscricaoPrestador>
+    <Incidencia>{incidencia}</Incidencia>
+    <Situacao>{situacao}</Situacao>
+    <TipoEmissao>{tipoEmissao}</TipoEmissao>
+</tns:PedidoConsultaGuia>
