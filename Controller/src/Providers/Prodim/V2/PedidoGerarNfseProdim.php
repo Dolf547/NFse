@@ -6,7 +6,7 @@
  * Time: 20:20
  */
 
-namespace Nfsews\Providers\Prodam\V2\Request;
+namespace Nfsews\Providers\Prodim\V2;
 include('adapted_vendor/nfse/src/Providers/Prodam/V2/Request/IRequest.php');
 use Nfsews\Providers\Prodam\V2\Request\IRequest;
 
@@ -14,7 +14,7 @@ use Nfsews\Providers\Prodam\V2\Request\IRequest;
 use Nfsews\ParseTemplate;
 use Nfsews\Providers\Prodam\V2\Helpers\Signer;
 
-class PedidoEnvioRps implements IRequest
+class PedidoGerarNfseProdim implements IRequest
 {
     const SYS_DS = DIRECTORY_SEPARATOR;
     private $abrasfVersion = '1.00';

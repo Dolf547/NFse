@@ -44,7 +44,7 @@ class PedidoGerarNfse //implements IRequest
      */
     public function __construct()
     {
-        $this->templatePath = __dir__ . self::SYS_DS . '..' . self::SYS_DS . 'template' . self::SYS_DS . 'PedidoGerarNfse.xml'  ;
+        $this->templatePath = __dir__ . self::SYS_DS . '..' . self::SYS_DS . 'template' . self::SYS_DS . 'PedidoEnviarLoteRps.xml'  ;
     }
 
     /**
@@ -273,8 +273,7 @@ class PedidoGerarNfse //implements IRequest
         return Signer::sign($xml, $priKeyPem, $pubKeyClean, ['InfRps','LoteRps']);
     }
 
-    public function getEnvelopString(){
-
+     public function getEnvelopString(){
         return '<ns2:GerarNfseRequest xmlns:ns2="http://ws.bhiss.pbh.gov.br">
                     <nfseCabecMsg><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
                         <cabecalho xmlns="http://www.abrasf.org.br/nfse.xsd" versao="1.00">
@@ -284,6 +283,25 @@ class PedidoGerarNfse //implements IRequest
                     <nfseDadosMsg>{body}</nfseDadosMsg>
                 </ns2:GerarNfseRequest>';
 
-    }
+    }  
+
+    public function getEnvelopStringFeliz(){
+      /*   return '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/http">
+        <soapenv:Header>
+        <cabecalho versao="1.0">
+        <versaoDados>1.00</versaoDados>
+        </cabecalho>
+        </soapenv:Header>
+        <soapenv:Body>
+        <RecepcionarLoteRps>
+        <xmlEnvio>{body}</xmlEnvio>
+        </RecepcionarLoteRps>
+        </soapenv:Body>
+        </soapenv:Envelope>'; */
+    } 
+
+
+   
+    
 
 }

@@ -7,6 +7,8 @@
  */
 
 namespace Nfsews\Providers\Prodam\V2\Helpers;
+namespace Nfsews\Providers\Prodam\V2\Response\PedidoEnvioRpsResponse;
+
 
 
 class Soap
@@ -80,6 +82,7 @@ class Soap
             // cria uma response
             if (! empty($request->getResponseNamespace())) {
                 $nameSpaceResponse = $request->getResponseNamespace();
+                var_dump($nameSpaceResponse);
                 $objResponse = new $nameSpaceResponse();
 
                 if (!$objResponse->parseXml($callResult)) {

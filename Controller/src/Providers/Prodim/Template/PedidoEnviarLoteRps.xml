@@ -1,11 +1,11 @@
-<GerarNfseEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
+<EnviarLoteRpsEnvio2 xmlns="http://www.abrasf.org.br/nfse.xsd">
     <LoteRps Id="{idLoteRps}" versao="1.00">
         <NumeroLote>{numeroLote}</NumeroLote>
-  <Cnpj>{cpfCnpjPrestador}</Cnpj>
+        {cpxCpfCnpjPrestador}
         <InscricaoMunicipal>{inscricaoMunicipalPrestador}</InscricaoMunicipal>
         <QuantidadeRps>{quantidadeRps}</QuantidadeRps>
         <ListaRps>
             {rpsFragmentos}
         </ListaRps>
     </LoteRps>
-</GerarNfseEnvio>
+</EnviarLoteRpsEnvio>

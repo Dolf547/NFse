@@ -2,11 +2,11 @@
 /**
  * Created by PhpStorm.
  * User: Moisés
- * Date: 26/05/2019
- * Time: 15:46
+ * Date: 27/05/2019
+ * Time: 20:56
  */
 
-namespace Nfsews\Providers\Procempa\V3\Request;
+namespace Nfsews\Providers\Prodim\saovandelino;
 
 
 use Nfsews\ParseTemplate;
@@ -14,21 +14,23 @@ use Nfsews\Providers\Procempa\V3\Helpers\Signer;
 
 
 /**
- * Class PedidoEnviarLoteRps
+ * Class PedidoGerarNfse
  *
- * Realiza a emissão de uma ou várias notas fiscais
- * A documentação do município estabelece que serão aceitos neste serviço o máximo de 50 RPS para serem convertidos em NFS-e
+ * Utilizada para realizar o envio síncrono de RPS para ser convertido em nota fiscal
+ * Este serviço realiza a emissão da NFS-e no mesmo instante, no entanto, a documentação do município
+ * estabelece o máximo de 3 RPS para cada envio
  *
  * @package Nfsews\Providers\Procempa\V3\Request
  */
-class PedidoEnviarLoteRps //implements IRequest
+class Pedidoenviarlote //implements IRequest
 {
+
     const SYS_DS = DIRECTORY_SEPARATOR;
-    private $abrasfVersion = '1.00';
+    private $abrasfVersion = '2.00';
     private $soapHelper = '\\Nfsews\\Providers\\Procempa\\V3\\Helpers\\Soap';
-    private $responseNamespace = '\\Nfsews\\Providers\\Procempa\\V3\\Response\\PedidoEnvioLoteRpsResponse';
+    private $responseNamespace = '\\Nfsews\\Providers\\Procempa\\V3\\Response\\PedidoGerarNfseResponse';
     private $templatePath = null;
-    private $action = 'RecepcionarLoteRps';
+    private $action = 'mEnvioLoteRPSSincrono';
     private $idLoteRps = null;
     private $cpfCnpjPrestador = null;
     private $inscricaoMunicipalPrestador = null;
@@ -42,7 +44,7 @@ class PedidoEnviarLoteRps //implements IRequest
      */
     public function __construct()
     {
-        $this->templatePath = __dir__ . self::SYS_DS . '..' . self::SYS_DS . 'template' . self::SYS_DS . 'PedidoEnviarLoteRps.xml'  ;
+        $this->templatePath = __dir__ . self::SYS_DS . '..' . self::SYS_DS . 'template' . self::SYS_DS . 'PedidoEnviarLoteSv.xml'  ;
     }
 
     /**
@@ -60,6 +62,8 @@ class PedidoEnviarLoteRps //implements IRequest
     {
         return $this->soapHelper;
     }
+
+
     /**
      * @return string|null
      */
@@ -150,14 +154,30 @@ class PedidoEnviarLoteRps //implements IRequest
     }
 
 
-
     /**
-     * @param array $fragmento
+     * @param array $fragmentos
      */
-    public function addFragmento(RpsFragmento $fragmento)
+    public function addFragmento($fragmento)
     {
         array_push($this->fragmentos, $fragmento);
     }
+
+    /**
+     * @return string
+     */
+    public function getRpsFragmentos()
+    {
+        return $this->rpsFragmentos;
+    }
+
+    /**
+     * @param string $rpsFragmentos
+     */
+    public function setRpsFragmentos($rpsFragmentos)
+    {
+        $this->rpsFragmentos = $rpsFragmentos;
+    }
+
 
 
     /**
@@ -204,7 +224,19 @@ class PedidoEnviarLoteRps //implements IRequest
             [
                 'mark' =>  '{cpxCpfCnpjPrestador}',
                 'value' =>  (strlen($this->cpfCnpjPrestador) == 14) ? '<Cnpj>{cpfCnpjPrestador}</Cnpj>' : '<Cpf>{cpfCnpjPrestador}</Cpf>'
-            ]
+            ],
+
+            [
+            'mark' => '{InfDeclaracaoPrestacaoServico}',
+            'value' => '1'.$this->cpfCnpjPrestador.'000000000000001',
+            ],
+
+            [
+            'mark' => '{date}',
+            'value' => date('YmdHis'),
+            ],
+
+
         ];
     }
 
@@ -219,7 +251,6 @@ class PedidoEnviarLoteRps //implements IRequest
             $this->idLoteRps = 'Lote'. date('YmdHis'). rand(10, 99);
 
         $xml = '';
-
         $i = 0;
         foreach ($this->fragmentos as $rps){
             $xml .= str_replace('<?xml version="1.0"?>','', $rps->toXml()  );
@@ -236,7 +267,6 @@ class PedidoEnviarLoteRps //implements IRequest
         $this->rpsFragmentos = $xml;
         return ParseTemplate::parse($this, $this->getXmlReplaceMark());
     }
-
 
     /**
      * @param $priKeyPem
@@ -255,18 +285,37 @@ class PedidoEnviarLoteRps //implements IRequest
         return Signer::sign($xml, $priKeyPem, $pubKeyClean, ['InfRps','LoteRps']);
     }
 
-    public function getEnvelopStringFeliz(){
+     public function getEnvelopString(){
+        return '
+    <mEnvioLoteRPSSincrono xmlns="http://tempuri.org/">
+    <remessa>{body}</remessa>
+     <cabecalho  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" versao="20.01" xmlns="http://www.nfse-tecnos.com.br/nfse.xsd">
+     </cabecalho>
+        
+      </mEnvioLoteRPSSincrono> ';
 
-        return '<ns2:RecepcionarLoteRpsRequest xmlns:ns2="http://ws.bhiss.pbh.gov.br">
-                    <nfseCabecMsg><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
-                        <cabecalho xmlns="http://www.abrasf.org.br/nfse.xsd" versao="1.00">
-                            <versaoDados>1.00</versaoDados>
-                        </cabecalho>]]>
-                    </nfseCabecMsg>
-                    <nfseDadosMsg>{body}</nfseDadosMsg>
-                </ns2:RecepcionarLoteRpsRequest>';
+    }  
 
-    }
+ /*    public function getEnvelopStringFeliz(){
+        return '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+        <soapenv:Header>
+           <tem:cabecalho versao="?">
+              <!--Optional:-->
+              <tem:versaoDados>1.00</tem:versaoDados>
+           </tem:cabecalho>
+        </soapenv:Header>
+        <soapenv:Body>
+           <tem:SubstituirNfse>
+              <!--Optional:-->
+              <tem:xmlEnvio>?</tem:xmlEnvio>
+           </tem:SubstituirNfse>
+        </soapenv:Body>
+     </soapenv:Envelope>';
 
+    }  */
+
+
+   
+    
 
 }

@@ -1,0 +1,190 @@
+EnviarLoteRpsSincronoEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
+    <LoteRps Id="12013915933760001020000000000000001" versao="20.01">
+    </LoteRps>
+    <NumeroLote>{numeroLote}</NumeroLote>
+       <!--número identificado do lote enviado (sequencia individual por prestador de serviços)-->
+    <CpfCnpj>
+      <Cnpj>{cpxCpfCnpjPrestador}</Cnpj>
+    </CpfCnpj>
+    <InscricaoMunicipal>{inscricaoMunicipalPrestador}</InscricaoMunicipal>
+  
+    <QuantidadeRps>{quantidadeRps}</QuantidadeRps>
+     
+    <ListaRps>
+        <Rps>
+            <tcDeclaracaoPrestacaoServico>
+                <InfDeclaracaoPrestacaoServico Id="{InfDeclaracaoPrestacaoServico}">
+            
+                    <Rps>
+                        <IdentificacaoRps>
+                            <Numero>1</Numero>
+                            <Serie>UNICA</Serie>
+                             <!--identificação da série do RPS, a NFS-e Tecnos convencionou série 'UNICA'-->
+                            <Tipo>1</Tipo>
+                          
+                        </IdentificacaoRps>
+                        <DataEmissao>{date}</DataEmissao>
+                        <!--data com horário da emissão do RPS (se for colocado a data sem hora, o sistema da NFS-e irá colocar a hora como 00:00:00 por padrão)-->
+                        <Status>1</Status>
+                    </Rps>
+                    <Competencia>2022-01-05T13:34:54</Competencia>
+                    <IdCidade>4305108</IdCidade>
+                    <Servico>
+                    <!--rol de serviços que compõem o RPS-->
+                        <tcDadosServico>
+                            <Valores>
+                                <BaseCalculoCRS>0.00</BaseCalculoCRS>
+                                <IrrfIndenizacao>0.00</IrrfIndenizacao>
+                                <ValorServicos>20.00</ValorServicos>
+                                <ValorDeducoes>0.00</ValorDeducoes>
+                                <ValorPis>0.00</ValorPis>
+                                <ValorCofins>0.00</ValorCofins>
+                                <ValorInss>0.00</ValorInss>
+                                <ValorIr>0.00</ValorIr>
+                                <ValorCsll>0.00</ValorCsll>
+                                <OutrasRetencoes>0.00</OutrasRetencoes>
+                                <ValorIss>0.60</ValorIss>
+                                <Aliquota>3.00</Aliquota>
+                                <DescontoIncondicionado>0.00</DescontoIncondicionado>
+                                <DescontoCondicionado>0.00</DescontoCondicionado>
+                            </Valores>
+                            <IssRetido>2</IssRetido>
+                            <ResponsavelRetencao>2</ResponsavelRetencao>
+                            <ItemListaServico>14.01</ItemListaServico>
+                            <!--código de identificação do serviço conforme lei complementar 116-->
+                                <!--OBS.: não coloque zero no inicio dos números -->
+                            <CodigoCnae>0</CodigoCnae>
+                            <CodigoTributacaoMunicipio>0</CodigoTributacaoMunicipio>
+                            <!--código de tributação local do municipio, preencher com "0" (ZER0)-->
+                            <Discriminacao>Teste</Discriminacao>
+                            <!--discriminação do serviço (disponibilidade de 2000 caracteres)-->
+                            <CodigoMunicipio>4305108</CodigoMunicipio>
+                            <!--codigo do IBGE do município onde foi prestado o serviço-->
+                            <CodigoPais>1058</CodigoPais>
+                            <!--codigo do pais onde está localizado o municipio-->
+                            <ExigibilidadeISS>1</ExigibilidadeISS>
+          
+                            <MunicipioIncidencia>4319505</MunicipioIncidencia>
+                            <!--codigo do IBGE do município onde recai a incidência do tributo-->
+                            <NumeroProcesso>91593376000102000000001</NumeroProcesso>
+                            <!--número do processo referente ao envio do lote do RPS-->
+                        </tcDadosServico>
+                    </Servico>
+                    <Prestador>
+                        <CpfCnpj>
+                            <Cnpj>14006801000179</Cnpj>
+                        </CpfCnpj>
+                        <RazaoSocial>EMBUTIDOS 5454</RazaoSocial>
+                        <InscricaoMunicipal>0000000000008472</InscricaoMunicipal>
+                    </Prestador>
+                    <Tomador>
+                        <IdentificacaoTomador>
+                            <CpfCnpj>
+                                <Cnpj>91593376000102</Cnpj>
+                            </CpfCnpj>
+                            <InscricaoMunicipal/>
+                            <InscricaoEstadual/>
+                            </IdentificacaoTomador>
+                        <RazaoSocial>TECNOSISTEMAS SISTEMAS DE COMPUT LTDA</RazaoSocial>
+                        <Endereco>
+                            <Endereco>AV OSVALDO ARANHA, 1075, SL 606</Endereco>
+                            <Numero>1075</Numero>
+                            <Complemento>sala 606</Complemento>
+                            <Bairro>CENTRO</Bairro>
+                            <CodigoMunicipio>4302105</CodigoMunicipio>
+                            <Uf>21</Uf>
+                            <CodigoPais>1058</CodigoPais>
+                            <Cep>784912</Cep>
+                        </Endereco>
+                        <Contato>
+                            <Telefone>5434550800</Telefone>
+                            <Email>cristian.trevisan@multi24h.com.br</Email>
+                        </Contato>
+                    </Tomador>
+                    <Intermediario>
+                    <!--se houver um intermediário na prestação do serviço, informe-o-->
+                        <IdentificacaoIntermediario>
+                            <CpfCnpj>
+                                <Cpf />
+                            </CpfCnpj>
+                            <InscricaoMunicipal />
+                        </IdentificacaoIntermediario>
+                        <RazaoSocial />
+                    </Intermediario>
+                    <ConstrucaoCivil>
+                    <!--se for uma prestação de serviços relacionada à construção civil informe os seus dados-->
+                        <CodigoObra/>
+                        <!--código da obra no registro do INSS-->
+                        <Art/>
+                        <!--número da ART no CREA-->
+                    </ConstrucaoCivil>
+                    <RegimeEspecialTributacao>0</RegimeEspecialTributacao>
+                    <!--codigo de identificação do regime especial de tributação-->
+                        <!--0-Nenhum-->
+                        <!--1-Microempresa Municipal-->
+                        <!--2-Estimativa-->
+                        <!--3-Sociedade de profissionais-->
+                        <!--4-Cooperativa-->
+                        <!--5-Microempresário Individual (MEI)-->
+                        <!--6-Microempresário e Empresa de Pequeno Porte (ME EPP)-->
+                    <NaturezaOperacao>1</NaturezaOperacao>
+                    <!--código da natureza da operação-->
+                        <!--1-Exigível-->
+                        <!--2-Não incidência-->
+                        <!--3-Isenção-->
+                        <!--4-Exportação-->
+                        <!--5-Imunidade-->
+                        <!--6-Exigibilidade Suspensa por Decisão Judicial-->
+                        <!--7-Exigibilidade Suspensa por Processo Administrativo-->
+                    <OptanteSimplesNacional>1</OptanteSimplesNacional>
+                    <!--identificação de optante do simples nacional-->
+                        <!--1-Sim-->
+                        <!--2-Não-->
+                    <IncentivoFiscal>2</IncentivoFiscal>
+                    <!--identificação de contribuinte com incentivos fiscais-->
+                        <!--1-Sim-->
+                        <!--2-Não-->
+                    <!--Tags para valores de tributos de acordo com a lei 12.741/2012 da transparência fiscal-->
+                    <PercentualCargaTributaria>0.00</PercentualCargaTributaria>
+                    <!--Percentual da carga tributária federal sobre a nota conforme fonte IPBT-->
+                    <ValorCargaTributaria>0.00</ValorCargaTributaria>
+                    <PercentualCargaTributariaEstadual>0.00</PercentualCargaTributariaEstadual>
+                    <!--Percentual da carga tributária estadual sobre a nota conforme fonte IPBT-->
+                    <ValorCargaTributariaEstadual>0.00</ValorCargaTributariaEstadual>
+                    <PercentualCargaTributariaMunicipal>0.00</PercentualCargaTributariaMunicipal>
+                    <!--Percentual da carga tributária municipal sobre a nota conforme fonte IPBT-->
+                    <ValorCargaTributariaMunicipal>0.00</ValorCargaTributariaMunicipal>
+                    <OutrasInformacoes>Teste</OutrasInformacoes>
+                    <!--Informações adicionais ou observações da nota-->
+                    <SiglaUF>RS</SiglaUF>
+                    <IdCidade>4302105</IdCidade>
+                    <FormaPagamento>0</FormaPagamento>
+                    <!--identificação da forma de pagamento-->
+                        <!--0-Não identificada-->
+                        <!--1-A Vista-->
+                        <!--2-Apresentação-->
+                        <!--3-A Prazo-->
+                        <!--4-Cartão de Débito-->
+                        <!--5-Cartão de Crédito-->
+                    <NumeroParcelas>2</NumeroParcelas>
+                    <!--Caso não houver parcelamento informar o 0 e não colocar as tags abaixo-->
+                        <Parcelamento>
+                            <Parcelas>
+                                <tcParcela>
+                                    <Numero>1</Numero>
+                                    <Valor>20.00</Valor>
+                                    <DataVencimento>2019-05-02T00:00:00</DataVencimento>
+                                </tcParcela>
+                                <tcParcela>
+                                    <Numero>2</Numero>
+                                    <Valor>20.00</Valor>
+                                    <DataVencimento>2019-06-02T00:00:00</DataVencimento>
+                                </tcParcela>
+                            </Parcelas>
+                        </Parcelamento>
+                </InfDeclaracaoPrestacaoServico>
+            </tcDeclaracaoPrestacaoServico>
+        </Rps>
+    </ListaRps>
+</EnviarLoteRpsSincronoEnvio>
+            

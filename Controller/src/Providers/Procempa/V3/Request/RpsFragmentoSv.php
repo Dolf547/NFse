@@ -11,6 +11,9 @@ namespace Nfsews\Providers\Procempa\V3\Request;
 
 use Nfsews\ParseTemplate;
 
+include('adapted_vendor/nfse/src/Providers/Procempa/V3/Helpers/SignerSv.php');
+use Nfsews\Providers\Procempa\V3\Helpers\SignerSv;
+
 
 /**
  * Class RpsFragmento
@@ -20,11 +23,12 @@ use Nfsews\ParseTemplate;
  *
  * @package Nfsews\Providers\Procempa\V3\Request
  */
-class RpsFragmento
+class RpsFragmentoSv
 {
 
     const SYS_DS = DIRECTORY_SEPARATOR;
     private $abrasfVersion = '1.00';
+    private $action = 'mEnvioLoteRPSSincrono';
     private $templatePath = null;
     private $idInfRps = null;
     private $numeroRps = null;
@@ -79,15 +83,16 @@ class RpsFragmento
     private $inscricaoMunicipalIntermediario = null;
     private $codigoObra = null;
     private $art = null;
-    private $numeroLote = 1;
 
     /**
      * RpsFragmento constructor.
      */
     public function __construct()
     {
-        $this->templatePath = __dir__ . self::SYS_DS . '..' . self::SYS_DS . 'template' . self::SYS_DS . 'RpsFragmento.xml'  ;
+        $this->templatePath = __dir__ . self::SYS_DS . '..' . self::SYS_DS . 'template' . self::SYS_DS . 'PedidoEnviarLoteSv.xml'  ;
     }
+
+
 
     /**
      * @return string
@@ -275,6 +280,12 @@ class RpsFragmento
     public function setStatus($status)
     {
         $this->status = $status;
+    }
+
+    public function getAction()
+    {
+        // TODO: Implement getAction() method.
+        return $this->action;
     }
 
     /**
@@ -537,6 +548,12 @@ class RpsFragmento
     public function getBaseCalculo()
     {
         return $this->baseCalculo;
+    }
+
+    public function getResponseNamespace()
+    {
+        // TODO: Implement getResponseNamespace() method.
+        return $this->responseNamespace;
     }
 
     /**
@@ -1032,26 +1049,40 @@ class RpsFragmento
         }
         return $array;
     }
-
+    
+    public function setIdLoteRps($idLoteRps)
+    {
+        $this->idLoteRps = $idLoteRps;
+    }
     /**
      * Utilizado para substituir TAGs que podem ter mais de um nome, como ocorre por exemplo com a CPFCNPJ
      * na qual pode assumir tanto o valor CNPJ quanto o valor CPF
      * @return array
      */
     private function getXmlReplaceMark(){
+
+       // $DateAndTime = date('Y-m-d  h:i:s a',time());
+       $DateAndTime = date('Y-m-d') . 'T'. date('H:i:s');
+     
         return [
             [
                 'mark' =>  '{cpxCpfCnpjPrestador}',
                 'value' =>  (strlen($this->cpfCnpjPrestador) == 14) ? '<Cnpj>{cpfCnpjPrestador}</Cnpj>' : '<Cpd>{cpfCnpjPrestador}</Cpd>'
             ],
             [
-                'mark' =>  '{cpxCpfCnpjTomador}',
-                'value' =>  (strlen($this->cpfCnpjTomador) == 14) ? '<Cnpj>{cpfCnpjTomador}</Cnpj>' : '<Cpf>{cpfCnpjTomador}</Cpf>'
+                'mark' => '{InfDeclaracaoPrestacaoServico}',
+                 'value' => '1'.$this->cpfCnpjPrestador.'000000000000001',
             ],
-            [
-                'mark' =>  '{cpxCpfCnpjIntermediario}',
-                'value' =>  (strlen($this->cpfCnpjIntermediario) == 14) ? '<Cnpj>{cpfCnpjIntermediario}</Cnpj>' : '<Cpf>{cpfCnpjIntermediario}</Cpf>'
-            ],
+
+             [
+                'mark' => '{date}',
+                'value' => "$DateAndTime",
+             ],
+
+             [
+                'mark' => '{Competencia}',
+                'value' => $DateAndTime,
+             ],
         ];
     }
 
@@ -1062,11 +1093,65 @@ class RpsFragmento
     public function toXml()
     {
         // TODO: Implement toXml() method.
-        if(empty($this->idInfRps))
+        if (empty($this->idLoteRps))
+            $this->idLoteRps = 'Lote'. date('YmdHis'). rand(10, 99);
+
+            if(empty($this->idInfRps))
             $this->idInfRps = 'RPS_'. preg_replace('/[\. ]/','',microtime(true));
 
+
+        $xml = '';
+        $i = 0;
+        foreach ($this->fragmentos as $rps){
+            $xml .= str_replace('<?xml version="1.0"?>','', $rps->toXml()  );
+            if (++$i == 1){
+                if(empty($this->cpfCnpjPrestador))
+                    $this->cpfCnpjPrestador = $rps->getCpfCnpjPrestador();
+                if(empty($this->inscricaoMunicipalPrestador))
+                    $this->inscricaoMunicipalPrestador = $rps->getInscricaoMunicipalPrestador();
+            }
+        }
+        if (empty($this->quantidadeRps))
+            $this->quantidadeRps = count($this->fragmentos);
+
+        $this->rpsFragmentos = $xml;
         return ParseTemplate::parse($this, $this->getXmlReplaceMark());
     }
+
+    public function setNumeroLote($numeroLote)
+    {
+      
+        $this->numeroLote = $numeroLote;
+     
+    }
+
+    public function setQuantidadeRps($quantidadeRps)
+    {
+        $this->quantidadeRps = $quantidadeRps;
+    }
+
+    public function toXmlSigned($priKeyPem, $pubKeyClean){
+        $this->numeroLote = 1;
+        if (empty($this->numeroLote))
+            throw new \Exception('O numero do lote não pode ser nulo');
+
+        if (empty($this->idLoteRps))
+            $this->idLoteRps = 'Lote_'. time();
+
+        $xml = $this->toXml();
+        return SignerSv::sign($xml, $priKeyPem, $pubKeyClean, ['InfDeclaracaoPrestacaoServico', 'LoteRps']);
+    }
+
+    public function getEnvelopString(){
+        return '
+    <mEnvioLoteRPSSincrono xmlns="http://tempuri.org/">
+    <remessa>{body}</remessa>
+     <cabecalho  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" versao="20.01" xmlns="http://www.nfse-tecnos.com.br/nfse.xsd">
+     </cabecalho>
+        
+      </mEnvioLoteRPSSincrono> ';
+
+    }  
 
 
 }
