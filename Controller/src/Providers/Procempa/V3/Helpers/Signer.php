@@ -39,13 +39,16 @@ class Signer
         $dom->preserveWhiteSpace = false;
         $dom->formatOutput = false;
 
+        var_dump($dom);
+
         if (!is_array($tagname))
             throw  new \Exception('tagname precisa ser um array na assinatura');
         else
             foreach ($tagname as $tag) {
                 $existTag = $dom->getElementsByTagName($tag)->item(0);
+                var_dump($existTag);
                 if (empty($existTag))
-                    throw new \Exception('Tag ' . $tag . ' não encontrada para asiinatura');
+                    throw new \Exception('Tag ' . $tag . ' não encontrada para asinatura');
             }
 
         // Se estiver tudo ok assina
