@@ -51,52 +51,73 @@ class Soap
         // Obtem a string de envelopamento conforme o WSDL do servidor da Prefeitura especifica
         $envelop = $request->getEnvelopString();
         $xml = '';
+
+       
+       
         // verifica se existe o método toXmlSigned e o chama, senão chama o método toXml a fim de obter o XML a ser enviado
    
         if (method_exists($request, 'toXmlSigned')){
+           
             if (empty($this->priKeyPem) || empty($this->pubKeyClean) ){
                 throw new \Exception('Para esta operação é obrigatório informar a chave privada e publica do certificado digital');
             }
+
+            //entrou aki
             $xml = $request->toXmlSigned($this->priKeyPem, $this->pubKeyClean );
-     
+         
         }else{
          
             $xml = $request->toXml();
+            
         }
       
+    
         // Substitui o {body} da string de envelope pelo o XML a ser enviado
         $message = str_replace('{body}', '<![CDATA['. $xml . ']]>', $envelop);
-       
+
         
 
+      
+      
         $soap = null;
         $callResult = null;
         try {
             libxml_disable_entity_loader(false);
-            //aki da o erro
+           
            $soap =  new \SoapClient($this->wsdl , $this->options);
-         var_dump($soap);
+
+       
+          
             // obtem o action name para chamada do método do webservice
            $actionName = $request->getAction();
+        
+      
+       
             // Configura a string XML para o formato do soapclient
+
+          
+           
           $envelopedMessage = new \SoapVar($message, XSD_ANYXML);
         
-
-            // faz o envio do xml para servidor da prefeitura
-            $callResult = $soap->$actionName($envelopedMessage);
-         
-           
+        
+      
 
 
+        
+            //aki da erro de objeto
+          $soap->$actionName($envelopedMessage);
+   
+  
+       
             // Se callResult estiver no formato de objeto, o transforma em string
-            if (is_object($callResult) && ! empty($callResult->outputXML) && is_string($callResult->outputXML))
+          /*   if (is_object($callResult) && ! empty($callResult->outputXML) && is_string($callResult->outputXML))
                 $callResult = $callResult->outputXML;
             else{
                 if ( stripos($soap->__getLastResponse(), 'soap:Envelope') !== false)
                     $callResult = $soap->__getLastResponse();
-            }
-           
-
+            } */
+       
+    
             // cria uma response
             if (! empty($request->getResponseNamespace())) {
                 $nameSpaceResponse = $request->getResponseNamespace();
@@ -123,7 +144,7 @@ class Soap
         }catch (\SoapFault $e){
             $response = [$callResult, $soap, $e->getMessage()];
             // $response = new Response($soap, $this->logDirectory, $e->getMessage());
-
+          
         }catch (\Exception $e){
             //throw new \Exception($e->getTraceAsString());
             $response = [$callResult, $soap, $e->getMessage()];
